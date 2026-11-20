@@ -14,6 +14,19 @@ Camera mode
 - [ ] Toggle off: full control back, HUD back, no queued clicks or swings fire
 - [ ] Swing looks smooth on screen at 60 fps, no stepping
 
+Camera modes (bind "Cycle camera mode" too)
+- [ ] Cycle key with camera off: chat says "Camera: Pan", "Camera: Stationary", "Camera: Follow" in turn
+- [ ] Stationary: holds the exact view (direction and tilt) you had when turning camera mode on
+- [ ] Pan: swings around the set view like before, never further than 45 deg either way
+- [ ] Follow, nobody near: pans from the set view
+- [ ] Follow, someone walks into view (in sight, within 24 blocks): camera turns smoothly to them and
+      keeps them in frame, up and down too
+- [ ] Someone else comes closer: camera stays on the first person
+- [ ] First person walks behind a wall: camera holds for ~5 s, then picks the next person or goes back to panning
+- [ ] 5 or more people in view at once: camera pans instead; following resumes when fewer are around
+- [ ] Turning is smooth on the stream, no jumps, never spins the long way round
+- [ ] Mode is the same after restarting the game
+
 Streaming (as CHUDWOLF)
 - [ ] Nothing running, toggle on: MediaMTX, Caddy, backend and OBS start by themselves, page goes Live within ~20 s
 - [ ] Toggle off: page shows Paused, OBS stops streaming, everything else keeps running

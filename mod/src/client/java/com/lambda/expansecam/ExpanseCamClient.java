@@ -14,6 +14,7 @@ public class ExpanseCamClient implements ClientModInitializer {
 	);
 
 	public static KeyMapping toggleKey;
+	public static KeyMapping shotKey;
 
 	@Override
 	public void onInitializeClient() {
@@ -28,9 +29,20 @@ public class ExpanseCamClient implements ClientModInitializer {
 				CATEGORY
 		));
 
+		// Follow -> Pan -> Stationary, works with camera mode on or off
+		shotKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.expansecam.shot",
+				InputConstants.Type.KEYBOARD,
+				InputConstants.UNKNOWN.getValue(),
+				CATEGORY
+		));
+
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (toggleKey.consumeClick()) {
 				CamMode.toggle(mc.player);
+			}
+			while (shotKey.consumeClick()) {
+				CamMode.cycleShot(mc.player);
 			}
 			CamMode.tick(mc);
 		});

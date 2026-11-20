@@ -23,6 +23,18 @@ public class CamConfig {
 	// how long after leaving the server before stop.ps1 runs
 	public int stopDelayMinutes = 6;
 	public String backend = "http://127.0.0.1:8081";
+	// follow, pan or stationary; the cycle key changes it
+	public String mode = "follow";
+	// blocks
+	public int followRange = 24;
+	// this many players in sight at once = pan instead of following
+	public int crowdSize = 5;
+	// how long nobody's in sight before going back to panning
+	public float idleSeconds = 5;
+
+	public Shot shot() {
+		return Shot.parse(mode);
+	}
 
 	public static CamConfig load(Path file) {
 		CamConfig cfg = null;
@@ -39,6 +51,10 @@ public class CamConfig {
 		cfg.swing = Pan.clampSwing(cfg.swing);
 		cfg.period = Math.max(10f, cfg.period);
 		cfg.stopDelayMinutes = Math.max(1, cfg.stopDelayMinutes);
+		cfg.mode = cfg.shot().name().toLowerCase(java.util.Locale.ROOT);
+		cfg.followRange = Math.max(4, Math.min(64, cfg.followRange));
+		cfg.crowdSize = Math.max(2, cfg.crowdSize);
+		cfg.idleSeconds = Math.max(1f, cfg.idleSeconds);
 		if (cfg.account == null) {
 			cfg.account = "CHUDWOLF";
 		}

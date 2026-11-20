@@ -27,6 +27,35 @@ class CamConfigTest {
 	}
 
 	@Test
+	void followDefaults() throws Exception {
+		CamConfig cfg = CamConfig.load(dir.resolve("expansecam.json"));
+		assertEquals(Shot.FOLLOW, cfg.shot());
+		assertEquals(24, cfg.followRange);
+		assertEquals(5, cfg.crowdSize);
+		assertEquals(5f, cfg.idleSeconds);
+	}
+
+	@Test
+	void badFollowValuesGetFixed() throws Exception {
+		Path file = dir.resolve("expansecam.json");
+		Files.writeString(file, "{\"mode\":\"spin\",\"followRange\":500,\"crowdSize\":1,\"idleSeconds\":0}");
+		CamConfig cfg = CamConfig.load(file);
+		assertEquals(Shot.FOLLOW, cfg.shot());
+		assertEquals(64, cfg.followRange);
+		assertEquals(2, cfg.crowdSize);
+		assertEquals(1f, cfg.idleSeconds);
+	}
+
+	@Test
+	void shotsCycleInOrder() {
+		assertEquals(Shot.PAN, Shot.FOLLOW.next());
+		assertEquals(Shot.STATIONARY, Shot.PAN.next());
+		assertEquals(Shot.FOLLOW, Shot.STATIONARY.next());
+		assertEquals(Shot.PAN, Shot.parse("pan"));
+		assertEquals(Shot.FOLLOW, Shot.parse(null));
+	}
+
+	@Test
 	void stopDelayIsAtLeastAMinute() throws Exception {
 		Path file = dir.resolve("expansecam.json");
 		Files.writeString(file, "{\"stopDelayMinutes\":0}");
