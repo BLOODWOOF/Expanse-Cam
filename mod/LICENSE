@@ -1,12 +1,53 @@
+Expanse Cam
 Copyright (c) 2026 BLOODWOLF. All rights reserved.
 
-This repository is public so people can see how the Expanse cam works. That's all
-it gives you. No permission is granted to copy, modify, redistribute, host or
-otherwise use any part of it (code, mod, website, images) without written
-permission from the copyright holder.
+1. What this covers
 
-The Expanse logo and banner belong to The Expanse server and aren't covered by this
-notice.
+   Everything in this repository and anything built from it, including the Minecraft
+   mod and its jar files, the website, the server scripts and configuration, and the
+   Cloudflare Worker ("the Software"), except the third-party material listed in
+   section 5.
 
-Minecraft is a trademark of Mojang AB. This project is not affiliated with or
-endorsed by Mojang or Microsoft.
+2. What you may do
+
+   The Software is published so people can see how it works. You may view it and fork
+   it on GitHub only to the extent GitHub's Terms of Service require. You may watch the
+   live page as a viewer.
+
+3. What you may not do
+
+   Without written permission from the copyright holder you may not copy, modify,
+   merge, publish, distribute, sublicense, sell, host, run or otherwise use the
+   Software or any part of it, in source or compiled form, for any purpose. That
+   includes running your own copy of the mod, the website or the server side, and
+   using any of it in another project.
+
+4. Contributions
+
+   If you open an issue or pull request, or otherwise send something to this project,
+   you agree the copyright holder may use, change and publish it as part of the
+   Software without owing you anything, and you confirm you have the right to give it.
+
+5. Third-party material
+
+   Not covered by this notice and still under its owners' own terms:
+   - The Expanse logo and banner, which belong to The Expanse server
+   - Minecraft, a trademark of Mojang AB. This project is not affiliated with or
+     endorsed by Mojang or Microsoft
+   - Software the project works with but does not include, such as Fabric Loader,
+     Fabric API, MediaMTX, Caddy, cloudflared, OBS Studio and Cloudflare Workers.
+     The Gradle wrapper files in mod/gradle/ are Gradle's, under the Apache License 2.0
+
+6. No warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+7. Limitation of liability
+
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+   OR IN CONNECTION WITH THE SOFTWARE OR THE USE OF OR OTHER DEALINGS IN THE SOFTWARE.
+
+For permission to use any of it, open an issue on the repository.

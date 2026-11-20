@@ -1,0 +1,14 @@
+{
+  "name": "expanse-cam",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "kv_namespaces": [
+    // filled in by `npx wrangler kv namespace create CAM`
+    { "binding": "CAM", "id": "6668aa4c8c3f4c8582d57f6690b413a1" }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "https://bloodwoof.github.io"
+  }
+  // WORKER_KEY is a secret: npx wrangler secret put WORKER_KEY
+}

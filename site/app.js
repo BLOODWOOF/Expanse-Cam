@@ -1,21 +1,52 @@
-import { mapLink, conePath, claimAt, worldName, closestZoom, claimLayers, badgeText, trimChat, backendUrl, maintenance } from "./map.js";
+import {
+  mapLink, conePath, claimAt, worldName, closestZoom, claimLayers, badgeText, backendUrl,
+  mergeChat, backendFromWorker,
+} from "./map.js";
 
 const $ = (id) => document.getElementById(id);
 const video = $("video");
 
 let site;
+// where the PC is: the quick tunnel's address from the Worker, or "" for the dev site
+let backend = null;
 let status = null;
 let backendUp = false;
 let playing = false;
 let lastMapKey = "";
+let liveFails = 0;
 
-// everything live comes from the PC (site.json "backend"), the page itself may be on GitHub Pages
-const be = (path) => backendUrl(site?.backend, path);
+const be = (path) => backendUrl(backend, path);
 
 async function getJson(url) {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
   return res.json();
+}
+
+// --- finding the PC ---
+
+// null = nothing running (or the Worker can't be reached)
+async function findBackend() {
+  if (!site.worker) return site.backend ?? "";
+  try {
+    const res = await fetch(site.worker, { cache: "no-store" });
+    return res.ok ? backendFromWorker(await res.json()) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setMaintenance(on) {
+  document.body.classList.toggle("maint", on);
+  $("maint").hidden = !on;
+}
+
+// shown while nothing's running; reloads the page once the cam comes back
+async function waitForCam() {
+  setMaintenance(true);
+  const found = await findBackend();
+  if (found !== null) return location.reload();
+  setTimeout(waitForCam, 30000);
 }
 
 // --- stream ---
@@ -27,10 +58,8 @@ function render() {
   $("status").className = "badge " + (live ? "live" : text === "Paused" ? "paused" : "off");
   const showing = live && playing;
   $("offline").hidden = showing;
-  const down = maintenance(backendUp);
-  $("offline-title").textContent = down ? "Stream's down for maintenance" : text === "Paused" ? "Camera's paused" : "Camera's offline";
-  $("offline-sub").textContent = down ? "check back later, this page picks it up by itself"
-    : text === "Paused" ? "it'll be back in a bit" : "leave this open, it reconnects by itself";
+  $("offline-title").textContent = text === "Paused" ? "Camera's paused" : "Camera's offline";
+  $("offline-sub").textContent = text === "Paused" ? "it'll be back in a bit" : "leave this open, it reconnects by itself";
   $("unmute").hidden = !showing || !video.muted;
 }
 
@@ -74,7 +103,52 @@ video.addEventListener("playing", () => {
   render();
 });
 
-// --- status + where the camera is ---
+// --- status, chat and where the camera is, one request every 3 s ---
+
+let chatLines = [];
+let lastChatId = 0;
+
+function chatLine(line) {
+  const li = document.createElement("li");
+  li.className = line.kind === "game" ? "game" : "said";
+  li.textContent = line.text;
+  return li;
+}
+
+function showChat(incoming) {
+  if (!incoming.length) return;
+  const list = $("chat");
+  // follow new lines unless someone scrolled up to read
+  const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+  chatLines = mergeChat(chatLines, incoming);
+  list.replaceChildren(...chatLines.map(chatLine));
+  $("nochat").hidden = chatLines.length > 0;
+  if (atBottom) list.scrollTop = list.scrollHeight;
+}
+
+async function refreshLive() {
+  if (document.body.classList.contains("maint")) return;
+  try {
+    const live = await getJson(be(`api/live?after=${lastChatId}`));
+    status = live.status;
+    backendUp = true;
+    liveFails = 0;
+    showChat(live.chat);
+    lastChatId = live.lastId;
+  } catch {
+    status = null;
+    backendUp = false;
+    // the tunnel may have moved (restart) or everything stopped: ask the Worker again
+    if (++liveFails >= 3 && site.worker) {
+      const found = await findBackend();
+      if (found === null) return waitForCam();
+      if (found !== backend) return location.reload();
+      liveFails = 0;
+    }
+  }
+  render();
+  await showCam(status?.cam);
+}
 
 async function loadClaims(world) {
   const layers = claimLayers(await getJson(be(`map/tiles/${world}/markers.json`)));
@@ -83,23 +157,12 @@ async function loadClaims(world) {
   return lists.flat();
 }
 
-async function refreshStatus() {
-  try {
-    status = await getJson(be("api/status"));
-    backendUp = true;
-  } catch {
-    status = null;
-    backendUp = false;
-  }
-  render();
-  await showCam(status?.cam);
-}
-
 async function showCam(cam) {
   const on = !!cam?.online;
   $("nomap").hidden = on;
   $("map").hidden = !on;
-  document.querySelector(".marker").hidden = !on;
+  // an svg, so .hidden does nothing on it
+  document.querySelector(".marker").toggleAttribute("hidden", !on);
 
   if (!on) {
     $("maplink").href = mapLink(site, null);
@@ -181,38 +244,12 @@ async function refreshAds() {
 
 $("adtoggle").addEventListener("click", () => setAdsHidden(!document.body.classList.contains("no-ads")));
 
-// --- chat (read only, nothing on this page ever sends to the game) ---
+// --- footer ---
 
-let chatLines = [];
-let lastChatId = 0;
-
-function chatLine(line) {
-  const li = document.createElement("li");
-  li.className = line.kind === "game" ? "game" : "said";
-  li.textContent = line.text;
-  return li;
-}
-
-async function refreshChat() {
-  // the whole list each time (200 short lines at most), so a backend restart
-  // starting ids over from 1 can't make the page miss lines
-  let lines;
-  try {
-    lines = await getJson(be("api/chat?after=0"));
-  } catch {
-    return;
-  }
-  const newest = lines.at(-1)?.id ?? 0;
-  if (newest === lastChatId) return;
-  lastChatId = newest;
-
-  const list = $("chat");
-  // follow new lines unless someone scrolled up to read
-  const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
-  chatLines = trimChat(lines);
-  list.replaceChildren(...chatLines.map(chatLine));
-  $("nochat").hidden = chatLines.length > 0;
-  if (atBottom) list.scrollTop = list.scrollHeight;
+function setLink(id, href) {
+  const a = $(id);
+  if (href) a.href = href;
+  else a.closest("li").remove();
 }
 
 // --- start ---
@@ -222,13 +259,22 @@ $("title").textContent = site.title;
 document.title = `${site.title} - Live`;
 $("info").textContent = site.info;
 $("spot").textContent = site.fallbackSpot;
-
+setLink("f-map", site.mapUrl);
+setLink("f-discord", site.discord);
+setLink("f-source", site.repo);
+setLink("f-licence", site.repo && `${site.repo}/blob/main/LICENSE`);
+setLink("f-issues", site.repo && `${site.repo}/issues`);
 setAdsHidden(adsHidden());
-render();
-connect();
-refreshStatus();
-refreshAds();
-setInterval(refreshStatus, 10000);
-setInterval(refreshAds, 60000);
-refreshChat();
-setInterval(refreshChat, 2000);
+
+backend = await findBackend();
+if (backend === null) {
+  waitForCam();
+} else {
+  setMaintenance(false);
+  render();
+  connect();
+  refreshLive();
+  refreshAds();
+  setInterval(refreshLive, 3000);
+  setInterval(refreshAds, 60000);
+}

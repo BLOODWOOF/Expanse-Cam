@@ -8,7 +8,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top">
+  <!-- whole-page view while nothing's running on the PC -->
+  <section id="maint" class="maint" hidden>
+    <div>
+      <img src="assets/logo.webp" alt="">
+      <h1>Stream's down for maintenance</h1>
+      <p>Check back later. This page picks it up by itself.</p>
+    </div>
+  </section>
+
+  <header class="top" id="top">
     <img class="logo" src="assets/logo.webp" alt="">
     <div class="names">
       <h1 id="title">The Expanse</h1>
@@ -60,6 +69,23 @@
 
     <aside id="ads-right" class="ads" aria-label="Ads"></aside>
   </main>
+
+  <footer class="foot">
+    <div class="foot-row">
+      <div class="foot-brand">
+        <img src="assets/logo.webp" alt="">
+        <span>The Expanse</span>
+      </div>
+      <ul class="foot-links">
+        <li><a id="f-map" href="#" target="_blank" rel="noopener">Full map</a></li>
+        <li><a id="f-discord" href="#" target="_blank" rel="noopener">Discord</a></li>
+        <li><a id="f-source" href="#" target="_blank" rel="noopener">Source code</a></li>
+        <li><a id="f-licence" href="#" target="_blank" rel="noopener">Licence</a></li>
+        <li><a id="f-issues" href="#" target="_blank" rel="noopener">Report a problem</a></li>
+      </ul>
+    </div>
+    <p class="foot-legal">© 2026 BLOODWOLF · Not affiliated with Mojang or Microsoft</p>
+  </footer>
 
   <script type="module" src="app.js"></script>
 </body>

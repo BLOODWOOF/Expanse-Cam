@@ -1,5 +1,7 @@
 {
   "title": "The Expanse",
+  "repo": "https://github.com/BLOODWOOF/Expanse-Cam",
+  "discord": "",
   "fallbackSpot": "Wilderness",
   "player": "CHUDWOLF",
   "info": "Live view from CHUDWOLF. He gets moved around the server now and then.",

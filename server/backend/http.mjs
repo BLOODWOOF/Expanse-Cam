@@ -117,6 +117,15 @@ export function createServers({ chat, ads, getStatus, onCamera, onChat = () => {
       send(res, 200, img.body, img.mime);
     }],
     ["GET", "/api/chat", (req, res, url) => send(res, 200, chat.after(Number(url.searchParams.get("after")) || 0))],
+    // what the page polls: status plus chat newer than ?after, in one request
+    ["GET", "/api/live", async (req, res, url) => {
+      const all = chat.after(0);
+      const lastId = all.at(-1)?.id ?? 0;
+      let after = Number(url.searchParams.get("after")) || 0;
+      // ids start over when the backend restarts, so send everything again
+      if (after > lastId) after = 0;
+      send(res, 200, { status: await getStatus(), chat: all.filter((l) => l.id > after), lastId });
+    }],
   ];
 
   const localRoutes = [

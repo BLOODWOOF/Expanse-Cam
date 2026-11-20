@@ -1,12 +1,13 @@
-# Serves the page and only the viewing side of MediaMTX. Publishing (/cam/whip) is never exposed,
-# and nothing on 127.0.0.1:8081 (ads admin, mod) is ever proxied.
+# Passes the cam's live data, video setup and the server map through to the page.
+# Publishing (/cam/whip) is never exposed, and nothing on 127.0.0.1:8081 (ads admin, mod)
+# is ever proxied.
 {
 	admin off
 	auto_https off
 }
 
-# shared by the live site and the dev site, {args[0]} is the folder to serve
-(cam) {
+# routes shared by the public port and the dev site
+(routes) {
 	handle /cam/reader.js {
 		reverse_proxy 127.0.0.1:8889
 	}
@@ -28,7 +29,13 @@
 		}
 	}
 
-	# Pl3xmap has no CORS headers, so claims and the map data go through here
+	# Quick tunnels hold server-sent events back, so Pl3xmap's live updates never arrive.
+	# Refusing them makes the map fall back to polling straight away.
+	handle /map/sse* {
+		respond 404
+	}
+
+	# Pl3xmap has no CORS headers and no https, so the map and claims go through here
 	@mapget {
 		path /map/*
 		method GET HEAD
@@ -51,21 +58,35 @@
 	handle /map/* {
 		respond 405
 	}
-
-	# no-cache = browsers recheck, so edits to site.json show up on refresh
-	handle {
-		root * "{args[0]}"
-		header Cache-Control no-cache
-		file_server
-	}
 }
 
-# live site, this is what Funnel points at
+# public, reached through the Cloudflare quick tunnel
 :8080 {
-	import cam "{$SITE_DIR}"
+	# other websites can't use the stream or the live data
+	@foreign {
+		path /api/* /cam/*
+		header Origin *
+		not header Origin https://bloodwoof.github.io
+	}
+	handle @foreign {
+		respond 403
+	}
+
+	import routes
+
+	# the page lives on GitHub Pages, not here
+	handle {
+		redir https://bloodwoof.github.io/Expanse-Cam/ 302
+	}
 }
 
 # dev site, this PC only
 http://127.0.0.1:8082 {
-	import cam "{$DEV_SITE_DIR}"
+	import routes
+
+	handle {
+		root * "{$DEV_SITE_DIR}"
+		header Cache-Control no-cache
+		file_server
+	}
 }

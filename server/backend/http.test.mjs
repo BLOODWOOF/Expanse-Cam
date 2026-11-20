@@ -46,6 +46,17 @@ test("chat posted locally shows up publicly", async () => {
   assert.deepEqual(lines.map((l) => l.text), ["hi"]);
 });
 
+test("api/live gives status and newer chat in one go", async () => {
+  await fetch(`${local}/mod/chat`, json({ text: "live one", kind: "chat" }));
+  const all = await (await fetch(`${pub}/api/live?after=0`)).json();
+  assert.equal(typeof all.status.paused, "boolean");
+  assert.ok(all.chat.some((l) => l.text === "live one"));
+  const lastId = all.chat.at(-1).id;
+  const none = await (await fetch(`${pub}/api/live?after=${lastId}`)).json();
+  assert.deepEqual(none.chat, []);
+  assert.equal(none.lastId, lastId);
+});
+
 test("camera state reaches status", async () => {
   assert.equal((await fetch(`${local}/mod/camera`, json({ online: true, dimension: "minecraft:overworld", x: 1, y: 2, z: 3, yaw: 0, swing: 45 }))).status, 204);
   const status = await (await fetch(`${pub}/api/status`)).json();

@@ -5,11 +5,25 @@ export function worldName(dimension) {
   return dimension.replace(":", "-");
 }
 
-// The page can live on GitHub Pages while everything live comes from the PC through
-// the Tailscale link. Empty base = same site as the page (served by Caddy directly).
+// The page lives on GitHub Pages while everything live comes from the PC through
+// its tunnel. Empty base = same site as the page (the dev site, served by Caddy).
 export function backendUrl(base, path) {
   if (!base) return path;
   return base.replace(/\/?$/, "/") + path;
+}
+
+// The Worker says where the PC's tunnel is. Only ever trust a trycloudflare address from it.
+export function backendFromWorker(answer) {
+  const url = answer?.url;
+  if (typeof url !== "string" || !/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(url)) return null;
+  return url + "/";
+}
+
+// new chat lines onto the old ones. Ids going backwards means the backend restarted.
+export function mergeChat(current, incoming) {
+  if (!incoming.length) return current;
+  if (current.length && incoming[0].id <= current.at(-1).id) return trimChat(incoming);
+  return trimChat([...current, ...incoming]);
 }
 
 // can't reach the PC at all = everything's shut down

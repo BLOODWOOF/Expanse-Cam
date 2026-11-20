@@ -1,6 +1,8 @@
 {
   "title": "The Expanse",
-  "backend": "https://expanse-cam.korat-hoki.ts.net/",
+  "worker": "https://expanse-cam.bloodwoof.workers.dev/backend",
+  "repo": "https://github.com/BLOODWOOF/Expanse-Cam",
+  "discord": "",
   "fallbackSpot": "Wilderness",
   "player": "CHUDWOLF",
   "info": "Live view from CHUDWOLF. He gets moved around the server now and then.",

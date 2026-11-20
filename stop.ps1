@@ -1,5 +1,22 @@
-# Stops what start.ps1 started (leaves Minecraft alone) and puts the maintenance page
-# on the public link. The mod runs this 6 min after leaving the server, or on quitting.
+# Stops what start.ps1 started (leaves Minecraft alone). The page on GitHub Pages then shows
+# the maintenance view by itself. The mod runs this 6 min after leaving the server, or on quitting.
+
+$root = $PSScriptRoot
+
+# Tell the Worker nothing's running, so pages switch to maintenance straight away
+$secrets = Join-Path $root 'server\secrets.yml'
+if (Test-Path $secrets) {
+    $secretText = Get-Content $secrets -Raw
+    $workerUrl = [regex]::Match($secretText, "(?m)^workerUrl:[ \t]*(\S+)").Groups[1].Value
+    $workerKey = [regex]::Match($secretText, "(?m)^workerKey:[ \t]*(\S+)").Groups[1].Value
+    if ($workerUrl -and $workerKey) {
+        try {
+            Invoke-RestMethod -Method Delete -Uri $workerUrl -Headers @{ Authorization = "Bearer $workerKey" } -TimeoutSec 10 | Out-Null
+        } catch {
+            # offline or the Worker's down; pages notice the tunnel's gone anyway
+        }
+    }
+}
 
 # Stop the stream first, OBS asks "are you sure?" if you close it mid-stream.
 # The backend stops it, ignores the mod from then on, answers once OBS says it's stopped, then exits.
@@ -9,8 +26,8 @@ try {
     # backend already gone, so nothing is telling OBS to stream
 }
 
-# Ask OBS to close like clicking X (works from the tray too). Killing it outright makes
-# OBS think it crashed and offer safe mode next time.
+# Ask OBS to close like clicking X. Killing it outright makes OBS think it crashed and
+# offer safe mode next time.
 $obs = Get-Process obs64 -ErrorAction SilentlyContinue
 if ($obs) {
     taskkill /PID $obs.Id 2>$null | Out-Null
@@ -22,19 +39,10 @@ if ($obs) {
 foreach ($name in 'caddy', 'mediamtx') {
     Get-Process $name -ErrorAction SilentlyContinue | Stop-Process
 }
+# our tunnel only, never a cloudflared installed as a Windows service
+Get-Process cloudflared -ErrorAction SilentlyContinue |
+    Where-Object { $_.Path -eq (Join-Path $root 'tools\cloudflared.exe') } |
+    Stop-Process
 Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
     Where-Object { $_.CommandLine -like '*backend.mjs*' } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }
-
-$tailscale = (Get-Command tailscale -ErrorAction SilentlyContinue).Source
-if (-not $tailscale) { $tailscale = 'C:\Program Files\Tailscale\tailscale.exe' }
-if (Test-Path $tailscale) {
-    # Tailscale serves the page itself, so it works with nothing else running.
-    # Serving a folder needs admin on Windows, so it goes through the task that
-    # server\setup-maintenance-task.ps1 registers. Plain text if that's missing.
-    if (Get-ScheduledTask -TaskName 'ExpanseCam maintenance page' -ErrorAction SilentlyContinue) {
-        Start-ScheduledTask -TaskName 'ExpanseCam maintenance page'
-    } else {
-        & $tailscale funnel --bg "text:Stream's down for maintenance. Check back later." | Out-Null
-    }
-}

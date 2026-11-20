@@ -1,14 +1,14 @@
 # Starts everything for a cam session. The mod runs this when camera mode turns on
 # as CHUDWOLF; safe to run again while things are already running.
-#   .\start.ps1           mediamtx + caddy + backend + tailscale funnel + OBS
+#   .\start.ps1           mediamtx + caddy + backend + cloudflare tunnel + OBS
 #                         (the backend tells OBS when to actually stream)
 #   .\start.ps1 -NoObs    everything except OBS, for testing
-#   .\start.ps1 -Local    no funnel, no relay, only viewable on this PC
-#   .\start.ps1 -NoFunnel relay on but not public, for testing
+#   .\start.ps1 -Local    no tunnel, no relay, only viewable on this PC (dev site)
+#   .\start.ps1 -NoTunnel relay on but no tunnel, for testing
 param(
     [switch]$NoObs,
     [switch]$Local,
-    [switch]$NoFunnel
+    [switch]$NoTunnel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,7 +20,7 @@ function Test-Running($name) { [bool](Get-Process $name -ErrorAction SilentlyCon
 $secrets = Join-Path $root 'server\secrets.yml'
 if (-not (Test-Path $secrets)) {
     $pass = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 24 | ForEach-Object { [char]$_ })
-    Set-Content $secrets "publishPass: $pass`r`nturnKeyId: `r`nturnApiToken: `r`nobsWsPass: " -Encoding ascii
+    Set-Content $secrets "publishPass: $pass`r`nturnKeyId: `r`nturnApiToken: `r`nobsWsPass: `r`nworkerUrl: `r`nworkerKey: " -Encoding ascii
     Write-Host "Made $secrets - put obs:<publishPass> in OBS as the Bearer Token"
 }
 $secretText = Get-Content $secrets -Raw
@@ -66,7 +66,6 @@ if (-not (Test-Running mediamtx)) {
 }
 
 if (-not (Test-Running caddy)) {
-    $env:SITE_DIR = Join-Path $root 'site'
     $env:DEV_SITE_DIR = Join-Path $root 'site-dev'
     Start-Process (Join-Path $root 'tools\caddy\caddy.exe') -ArgumentList 'run', '--config', "`"$(Join-Path $root 'server\Caddyfile')`"", '--adapter', 'caddyfile' -WorkingDirectory $root -WindowStyle Minimized
 }
@@ -79,11 +78,36 @@ if (-not $backend) {
         -RedirectStandardOutput (Join-Path $data 'backend.log') -RedirectStandardError (Join-Path $data 'backend.err.log')
 }
 
-if (-not $Local -and -not $NoFunnel) {
-    # public https address that stays the same, now pointing at Caddy instead of the maintenance page
-    $tailscale = (Get-Command tailscale -ErrorAction SilentlyContinue).Source
-    if (-not $tailscale) { $tailscale = 'C:\Program Files\Tailscale\tailscale.exe' }
-    & $tailscale funnel --bg 8080 | Out-Host
+if (-not $Local -and -not $NoTunnel) {
+    # Cloudflare quick tunnel to Caddy. Its address changes every start, so it gets handed to
+    # the Worker, which is where the page on GitHub Pages looks it up.
+    $workerUrl = Read-Secret 'workerUrl'
+    $workerKey = Read-Secret 'workerKey'
+    if (-not $workerUrl -or -not $workerKey) { throw "Fill in workerUrl and workerKey in $secrets (or use -NoTunnel)" }
+
+    $tunnelLog = Join-Path $root 'data\cloudflared.log'
+    # only our copy counts, not a cloudflared installed as a Windows service
+    $cloudflared = Join-Path $root 'tools\cloudflared.exe'
+    $ours = Get-Process cloudflared -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $cloudflared }
+    if (-not $ours) {
+        New-Item -ItemType Directory -Force (Split-Path $tunnelLog) | Out-Null
+        Remove-Item $tunnelLog -ErrorAction SilentlyContinue
+        Start-Process $cloudflared -WindowStyle Hidden `
+            -ArgumentList 'tunnel', '--no-autoupdate', '--url', 'http://localhost:8080', '--logfile', "`"$tunnelLog`""
+    }
+
+    $tunnelUrl = $null
+    for ($i = 0; $i -lt 60 -and -not $tunnelUrl; $i++) {
+        Start-Sleep -Milliseconds 500
+        $text = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
+        $m = [regex]::Matches("$text", 'https://[a-z0-9-]+\.trycloudflare\.com')
+        if ($m.Count) { $tunnelUrl = $m[$m.Count - 1].Value }
+    }
+    if (-not $tunnelUrl) { throw "cloudflared didn't report a tunnel address, see $tunnelLog" }
+
+    Invoke-RestMethod -Method Put -Uri $workerUrl -Headers @{ Authorization = "Bearer $workerKey" } `
+        -ContentType 'application/json' -Body (@{ url = $tunnelUrl } | ConvertTo-Json -Compress) | Out-Null
+    Write-Host "Tunnel: $tunnelUrl"
 }
 
 if (-not $NoObs -and -not (Test-Running obs64)) {
@@ -100,4 +124,4 @@ if (-not $NoObs -and -not (Test-Running obs64)) {
     if ($obs.MainWindowHandle -ne 0) { [ExpanseCam.Win]::ShowWindow($obs.MainWindowHandle, 7) | Out-Null }
 }
 
-Write-Host 'Page: http://localhost:8080/  dev: http://127.0.0.1:8082/  ads: http://localhost:8081/'
+Write-Host 'Page: https://bloodwoof.github.io/Expanse-Cam/  dev: http://127.0.0.1:8082/  ads: http://localhost:8081/'

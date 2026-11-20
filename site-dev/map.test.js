@@ -1,11 +1,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mapLink, worldName, conePath, claimAt, closestZoom, claimLayers, badgeText, trimChat, backendUrl, maintenance } from "./map.js";
+import { mapLink, worldName, conePath, claimAt, closestZoom, claimLayers, badgeText, trimChat, backendUrl, maintenance, mergeChat, backendFromWorker } from "./map.js";
+
+test("mergeChat adds newer lines", () => {
+  const cur = [{ id: 1 }, { id: 2 }];
+  assert.deepEqual(mergeChat(cur, [{ id: 3 }]).map((l) => l.id), [1, 2, 3]);
+  assert.equal(mergeChat(cur, []), cur);
+});
+
+test("mergeChat starts over when the backend restarted (ids went back)", () => {
+  assert.deepEqual(mergeChat([{ id: 7 }, { id: 8 }], [{ id: 1 }, { id: 2 }]).map((l) => l.id), [1, 2]);
+});
+
+test("mergeChat keeps only the newest 150", () => {
+  const cur = Array.from({ length: 150 }, (_, i) => ({ id: i + 1 }));
+  const out = mergeChat(cur, [{ id: 151 }]);
+  assert.equal(out.length, 150);
+  assert.equal(out[0].id, 2);
+});
+
+test("backendFromWorker only trusts trycloudflare https urls", () => {
+  assert.equal(backendFromWorker({ url: "https://some-words.trycloudflare.com" }), "https://some-words.trycloudflare.com/");
+  assert.equal(backendFromWorker({ url: "https://evil.com" }), null);
+  assert.equal(backendFromWorker({ url: "http://a.trycloudflare.com" }), null);
+  assert.equal(backendFromWorker(null), null);
+  assert.equal(backendFromWorker({}), null);
+});
 
 test("backendUrl points at the PC when the page is hosted elsewhere", () => {
-  const base = "https://expanse-cam.korat-hoki.ts.net/";
-  assert.equal(backendUrl(base, "api/status"), "https://expanse-cam.korat-hoki.ts.net/api/status");
-  assert.equal(backendUrl("https://expanse-cam.korat-hoki.ts.net", "cam/whep"), "https://expanse-cam.korat-hoki.ts.net/cam/whep");
+  const base = "https://some-words.trycloudflare.com/";
+  assert.equal(backendUrl(base, "api/status"), "https://some-words.trycloudflare.com/api/status");
+  assert.equal(backendUrl("https://some-words.trycloudflare.com", "cam/whep"), "https://some-words.trycloudflare.com/cam/whep");
   // served by Caddy itself: stay relative
   assert.equal(backendUrl("", "api/ads/img/1"), "api/ads/img/1");
   assert.equal(backendUrl(undefined, "map/"), "map/");
