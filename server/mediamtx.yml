@@ -1,0 +1,56 @@
+# MediaMTX config for the cam. start.ps1 fills in the {{...}} bits and runs a copy of this.
+
+logLevel: info
+logDestinations: [stdout]
+
+authMethod: internal
+authInternalUsers:
+  # OBS, publishing from this PC only
+  - user: obs
+    pass: "{{PUBLISH_PASS}}"
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: publish
+        path: cam
+  # the backend asking how many are watching, this PC only
+  - user: any
+    pass:
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: api
+  # viewers
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: read
+        path: cam
+
+# only the backend uses this, never proxied
+api: true
+apiAddress: 127.0.0.1:9997
+metrics: false
+pprof: false
+playback: false
+rtsp: false
+rtmp: false
+hls: false
+srt: false
+moq: false
+
+webrtc: true
+# only Caddy talks to this, from the same PC
+webrtcAddress: 127.0.0.1:8889
+webrtcEncryption: false
+webrtcAllowOrigins: ["*"]
+webrtcLocalUDPAddress: "127.0.0.1:8189"
+webrtcLocalTCPAddress: ""
+# never hand out this PC's addresses. Video goes through Cloudflare's TURN relay,
+# so viewers only ever see Cloudflare. No stun: entries, those would find the public IP
+webrtcIPsFromInterfaces: false
+webrtcAdditionalHosts: {{EXTRA_HOSTS}}
+webrtcICEServers2: {{ICE_SERVERS}}
+
+paths:
+  cam:
+    source: publisher

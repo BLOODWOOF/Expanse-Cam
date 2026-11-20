@@ -1,0 +1,71 @@
+# Serves the page and only the viewing side of MediaMTX. Publishing (/cam/whip) is never exposed,
+# and nothing on 127.0.0.1:8081 (ads admin, mod) is ever proxied.
+{
+	admin off
+	auto_https off
+}
+
+# shared by the live site and the dev site, {args[0]} is the folder to serve
+(cam) {
+	handle /cam/reader.js {
+		reverse_proxy 127.0.0.1:8889
+	}
+
+	@whep path /cam/whep /cam/whep/*
+	handle @whep {
+		reverse_proxy 127.0.0.1:8889
+	}
+
+	@api {
+		path /api/*
+		method GET HEAD
+	}
+	# the page itself is on GitHub Pages, so let it read these
+	handle @api {
+		reverse_proxy 127.0.0.1:8090 {
+			header_down Access-Control-Allow-Origin "https://bloodwoof.github.io"
+			header_down Vary Origin
+		}
+	}
+
+	# Pl3xmap has no CORS headers, so claims and the map data go through here
+	@mapget {
+		path /map/*
+		method GET HEAD
+	}
+	handle @mapget {
+		uri strip_prefix /map
+		reverse_proxy http://185.206.150.11:8117 {
+			header_up Host 185.206.150.11:8117
+			header_down Access-Control-Allow-Origin "https://bloodwoof.github.io"
+			header_down Vary Origin
+		}
+	}
+
+	handle /cam/* {
+		respond 404
+	}
+	handle /api/* {
+		respond 405
+	}
+	handle /map/* {
+		respond 405
+	}
+
+	# no-cache = browsers recheck, so edits to site.json show up on refresh
+	handle {
+		root * "{args[0]}"
+		header Cache-Control no-cache
+		file_server
+	}
+}
+
+# live site, this is what Funnel points at
+:8080 {
+	import cam "{$SITE_DIR}"
+}
+
+# dev site, this PC only
+http://127.0.0.1:8082 {
+	import cam "{$DEV_SITE_DIR}"
+}

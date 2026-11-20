@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Expanse - Live</title>
+  <link rel="icon" href="assets/logo.webp">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <img class="logo" src="assets/logo.webp" alt="">
+    <div class="names">
+      <h1 id="title">The Expanse</h1>
+      <p id="spot">&nbsp;</p>
+    </div>
+    <span id="status" class="badge off">Offline</span>
+  </header>
+
+  <main>
+    <aside id="ads-left" class="ads" aria-label="Ads"></aside>
+
+    <div class="middle">
+      <section class="screen">
+        <video id="video" muted autoplay playsinline></video>
+        <div id="offline" class="offline">
+          <p><span id="offline-title">Camera's offline</span><br><span id="offline-sub" class="sub">leave this open, it reconnects by itself</span></p>
+        </div>
+        <button id="unmute" class="unmute" hidden>Unmute</button>
+      </section>
+
+      <div class="under">
+        <button id="adtoggle" class="adtoggle">Hide ads</button>
+      </div>
+
+      <section class="below">
+        <div class="info chat">
+          <h2>Chat</h2>
+          <p id="info" class="pinned"></p>
+          <ol id="chat" class="lines" aria-live="polite"></ol>
+          <p id="nochat" class="quiet">Nothing said yet.</p>
+        </div>
+
+        <div class="map">
+          <div class="map-head">
+            <h2>Map</h2>
+            <a id="maplink" href="#" target="_blank" rel="noopener">Open full map</a>
+          </div>
+          <div class="map-frame">
+            <iframe id="map" title="Server map" loading="lazy"></iframe>
+            <svg class="marker" viewBox="-50 -50 100 100" aria-hidden="true">
+              <path id="cone" d=""></path>
+              <circle r="5"></circle>
+            </svg>
+            <p id="nomap" class="nomap" hidden>No camera position right now</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside id="ads-right" class="ads" aria-label="Ads"></aside>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

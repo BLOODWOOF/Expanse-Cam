@@ -1,0 +1,10 @@
+{
+  "title": "The Expanse",
+  "backend": "https://expanse-cam.korat-hoki.ts.net/",
+  "fallbackSpot": "Wilderness",
+  "player": "CHUDWOLF",
+  "info": "Live view from CHUDWOLF. He gets moved around the server now and then.",
+  "mapUrl": "http://185.206.150.11:8117/",
+  "mapZoom": -2,
+  "renderer": "vintage_story"
+}

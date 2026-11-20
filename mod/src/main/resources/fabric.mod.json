@@ -1,0 +1,29 @@
+{
+	"schemaVersion": 1,
+	"id": "expansecam",
+	"version": "${version}",
+	"name": "Expanse Cam",
+	"description": "Parks the camera on a slow pan for streaming the server",
+	"authors": [
+		"BLOODWOLF"
+	],
+	"license": "All-Rights-Reserved",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.lambda.expansecam.ExpanseCamClient"
+		]
+	},
+	"mixins": [
+		{
+			"config": "expansecam.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": ">=26.3 <26.4",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

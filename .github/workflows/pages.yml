@@ -1,0 +1,42 @@
+name: Publish page
+
+on:
+  push:
+    branches: [main]
+    paths: [site/**, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test
+        working-directory: site
+        run: node --test
+
+      # only what the browser needs, no tests
+      - name: Collect files
+        run: |
+          mkdir out
+          cp -r site/assets site/index.html site/app.js site/map.js site/style.css site/site.json out/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
